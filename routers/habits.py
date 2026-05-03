@@ -8,9 +8,6 @@ from typing import List
 router = APIRouter(prefix="/habits", tags=["habits & journal"])
 
 
-# =========================
-# GET ALL HABITS (calendar view)
-# =========================
 @router.get("/all", response_model=List[habit_schemas.HabitResponse])
 def get_all_habits(user_id: int, db: Session = Depends(database.get_db)):
 
@@ -22,11 +19,9 @@ def get_all_habits(user_id: int, db: Session = Depends(database.get_db)):
         models.Habit.user_id == user_id
     ).all()
 
-    # Helper to ensure we have a date object (not datetime)
     def to_date(d):
         return d.date() if hasattr(d, 'date') else d
 
-    # Get all relevant dates (from earliest track or 7 days ago, until today)
     all_dates_set = {date_obj.today(), date_obj.today() - timedelta(days=6)}
     for c in completions:
         if c.date:
@@ -34,8 +29,7 @@ def get_all_habits(user_id: int, db: Session = Depends(database.get_db)):
     
     first_date = min(all_dates_set)
     today = date_obj.today()
-    
-    # Generate all dates in the range
+
     all_dates = []
     curr = first_date
     while curr <= today:
@@ -45,7 +39,7 @@ def get_all_habits(user_id: int, db: Session = Depends(database.get_db)):
     results = []
 
     for d in all_dates:
-        # Pre-filter completions for this date to speed up
+     
         completion_map = {
             c.habit_definition_id: c.completed
             for c in completions
@@ -53,7 +47,7 @@ def get_all_habits(user_id: int, db: Session = Depends(database.get_db)):
         }
 
         for definition in definitions:
-            # Show all habits for all dates in the range
+   
             results.append({
                 "id": definition.id,
                 "name": definition.name,
@@ -64,9 +58,6 @@ def get_all_habits(user_id: int, db: Session = Depends(database.get_db)):
     return results
 
 
-# =========================
-# GET HABITS FOR ONE DATE
-# =========================
 @router.get("/", response_model=List[habit_schemas.HabitResponse])
 def get_habits(user_id: int, date: date_obj, db: Session = Depends(database.get_db)):
 
@@ -95,16 +86,13 @@ def get_habits(user_id: int, date: date_obj, db: Session = Depends(database.get_
     ]
 
 
-# =========================
-# CREATE HABIT (ONLY definition table)
-# =========================
 @router.post("/", response_model=habit_schemas.HabitResponse)
 def create_habit(
     habit: habit_schemas.HabitCreate,
     user_id: int,
     db: Session = Depends(database.get_db),
 ):
-    # Use provided created_at if available and valid
+   
     creation_date = habit.created_at if habit.created_at else date_obj.today()
 
     db_definition = models.HabitDefinition(
@@ -125,9 +113,6 @@ def create_habit(
     }
 
 
-# =========================
-# UPDATE COMPLETION STATUS
-# =========================
 @router.put("/{habit_id}", response_model=habit_schemas.HabitResponse)
 def update_habit_status(
     habit_id: int,
@@ -169,9 +154,6 @@ def update_habit_status(
     }
 
 
-# =========================
-# DELETE HABIT
-# =========================
 @router.delete("/{habit_id}")
 def delete_habit(habit_id: int, db: Session = Depends(database.get_db)):
 
@@ -192,9 +174,6 @@ def delete_habit(habit_id: int, db: Session = Depends(database.get_db)):
     return {"message": "Habit deleted"}
 
 
-# =========================
-# JOURNAL
-# =========================
 @router.get("/journal", response_model=List[habit_schemas.JournalEntryResponse])
 def get_journal_entries(
     user_id: int = None,

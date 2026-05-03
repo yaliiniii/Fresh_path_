@@ -1,6 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-import models, database
+import models 
+
+from database import get_db
 from schemas import user as user_schemas
 from datetime import datetime
 from routers.admin import ADMIN_EMAIL, ADMIN_PASSWORD, ADMIN_TOKEN
@@ -11,8 +13,8 @@ from security import get_password_hash, verify_password
 router = APIRouter(prefix="/users", tags=["users"])
 
 
-@router.post("/signup", response_model=user_schemas.UserResponse)
-def signup(user: user_schemas.UserCreate, db: Session = Depends(database.get_db)):
+@router.post("/signup")
+def signup(user: user_schemas.UserCreate, db: Session = Depends(get_db)):
 
     user.email = user.email.lower().strip()
 
@@ -43,11 +45,11 @@ def signup(user: user_schemas.UserCreate, db: Session = Depends(database.get_db)
 
 
 @router.post("/login")
-def login(user: user_schemas.UserLogin, db: Session = Depends(database.get_db)):
+def login(user: user_schemas.UserLogin, db: Session = Depends(get_db)):
     try:
         email = user.email.lower().strip()
         
-        # Admin check
+
         if email == ADMIN_EMAIL and user.password == ADMIN_PASSWORD:
             return {
                 "id": 0, 
@@ -57,7 +59,7 @@ def login(user: user_schemas.UserLogin, db: Session = Depends(database.get_db)):
                 "token": ADMIN_TOKEN
             }
             
-        # User check
+    
         db_user = db.query(models.User).filter(models.User.email == email).first()
         if not db_user:
             raise HTTPException(status_code=401, detail="User not found")
@@ -74,7 +76,7 @@ def login(user: user_schemas.UserLogin, db: Session = Depends(database.get_db)):
 
 
 @router.get("/me", response_model=user_schemas.UserResponse)
-def get_me(db: Session = Depends(database.get_db)):
+def get_me(db: Session = Depends(get_db)):
 
     user = db.query(models.User).first()
     if not user:
@@ -84,7 +86,7 @@ def get_me(db: Session = Depends(database.get_db)):
 
 @router.patch("/me", response_model=user_schemas.UserResponse)
 def update_me(
-    user_update: user_schemas.UserUpdate, db: Session = Depends(database.get_db)
+    user_update: user_schemas.UserUpdate, db: Session = Depends(get_db)
 ):
     db_user = db.query(models.User).first()
     if not db_user:
@@ -129,7 +131,7 @@ def update_me(
 
 
 @router.delete("/me")
-def delete_me(db: Session = Depends(database.get_db)):
+def delete_me(db: Session = Depends(get_db)):
     db_user = db.query(models.User).first()
     if not db_user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -139,7 +141,7 @@ def delete_me(db: Session = Depends(database.get_db)):
 
 
 @router.get("/{user_id}", response_model=user_schemas.UserResponse)
-def get_user(user_id: int, db: Session = Depends(database.get_db)):
+def get_user(user_id: int, db: Session = Depends(get_db)):
     db_user = db.query(models.User).filter(models.User.id == user_id).first()
     if not db_user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -150,7 +152,7 @@ def get_user(user_id: int, db: Session = Depends(database.get_db)):
 def update_user(
     user_id: int,
     user_update: user_schemas.UserUpdate,
-    db: Session = Depends(database.get_db),
+    db: Session = Depends(get_db),
 ):
     db_user = db.query(models.User).filter(models.User.id == user_id).first()
     if not db_user:
@@ -193,7 +195,7 @@ def update_user(
 
 
 @router.delete("/{user_id}")
-def delete_user(user_id: int, db: Session = Depends(database.get_db)):
+def delete_user(user_id: int, db: Session = Depends(get_db)):
     db_user = db.query(models.User).filter(models.User.id == user_id).first()
     if not db_user:
         raise HTTPException(status_code=404, detail="User not found")
